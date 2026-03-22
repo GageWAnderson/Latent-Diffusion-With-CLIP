@@ -200,3 +200,33 @@ class FrozenClipImageEmbedder(nn.Module):
         # x is assumed to be in range [-1,1]
         return self.model.encode_image(self.preprocess(x))
 
+
+class FrozenHFCLIPTextEmbedder(AbstractEncoder):
+    """Uses HuggingFace CLIPTextModel for full sequence text embeddings."""
+    def __init__(self, version="openai/clip-vit-base-patch32", max_length=77,
+                 cache_dir="/mnt/data/hf_cache"):
+        super().__init__()
+        from transformers import CLIPTokenizer, CLIPTextModel
+        self.tokenizer = CLIPTokenizer.from_pretrained(version, cache_dir=cache_dir)
+        self.transformer = CLIPTextModel.from_pretrained(version, cache_dir=cache_dir)
+        self.max_length = max_length
+        self.freeze()
+
+    def freeze(self):
+        self.transformer = self.transformer.eval()
+        for param in self.parameters():
+            param.requires_grad = False
+
+    def forward(self, text):
+        batch_encoding = self.tokenizer(
+            text, truncation=True, max_length=self.max_length,
+            return_length=True, return_overflowing_tokens=False,
+            padding="max_length", return_tensors="pt"
+        )
+        tokens = batch_encoding["input_ids"].to(self.transformer.device)
+        outputs = self.transformer(input_ids=tokens)
+        return outputs.last_hidden_state
+
+    def encode(self, text):
+        return self(text)
+

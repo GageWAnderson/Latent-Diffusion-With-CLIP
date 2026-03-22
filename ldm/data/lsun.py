@@ -26,7 +26,7 @@ class LSUNBase(Dataset):
         }
 
         self.size = size
-        self.interpolation = {"linear": PIL.Image.LINEAR,
+        self.interpolation = {"linear": PIL.Image.BILINEAR,
                               "bilinear": PIL.Image.BILINEAR,
                               "bicubic": PIL.Image.BICUBIC,
                               "lanczos": PIL.Image.LANCZOS,
@@ -60,13 +60,13 @@ class LSUNBase(Dataset):
 
 
 class LSUNChurchesTrain(LSUNBase):
-    def __init__(self, **kwargs):
-        super().__init__(txt_file="data/lsun/church_outdoor_train.txt", data_root="data/lsun/churches", **kwargs)
+    def __init__(self, txt_file="data/lsun/church_outdoor_train.txt", data_root="data/lsun/churches", **kwargs):
+        super().__init__(txt_file=txt_file, data_root=data_root, **kwargs)
 
 
 class LSUNChurchesValidation(LSUNBase):
-    def __init__(self, flip_p=0., **kwargs):
-        super().__init__(txt_file="data/lsun/church_outdoor_val.txt", data_root="data/lsun/churches",
+    def __init__(self, txt_file="data/lsun/church_outdoor_val.txt", data_root="data/lsun/churches", flip_p=0., **kwargs):
+        super().__init__(txt_file=txt_file, data_root=data_root,
                          flip_p=flip_p, **kwargs)
 
 

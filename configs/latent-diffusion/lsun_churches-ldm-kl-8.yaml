@@ -39,6 +39,7 @@ model:
         num_heads: 8
         use_scale_shift_norm: True
         resblock_updown: True
+        use_checkpoint: True
 
     first_stage_config:
       target: ldm.models.autoencoder.AutoencoderKL
@@ -65,16 +66,20 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 96
+    batch_size: 8
     num_workers: 5
     wrap: False
     train:
       target: ldm.data.lsun.LSUNChurchesTrain
       params:
+        txt_file: /mnt/data/datasets/lsun/lsun/church_outdoor_train.txt
+        data_root: /mnt/data/datasets/lsun/churches
         size: 256
     validation:
       target: ldm.data.lsun.LSUNChurchesValidation
       params:
+        txt_file: /mnt/data/datasets/lsun/lsun/church_outdoor_val.txt
+        data_root: /mnt/data/datasets/lsun/churches
         size: 256
 
 lightning:
@@ -89,3 +94,4 @@ lightning:
 
   trainer:
     benchmark: True
+    accumulate_grad_batches: 4

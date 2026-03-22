@@ -19,6 +19,15 @@
 <img src=assets/modelfigure.png />
 </p>
 
+## Quickstart
+Run Inference (classifier-free guidance) with the following command:
+```bash
+CUDA_VISIBLE_DEVICES=0
+      PYTHONPATH=/home/rocus/Documents/gage/development/latent-diffusion python scripts/sample_diffusion.py -r
+      logs/2026-03-08T14-31-24_custom-ldm-kl-8/checkpoints/last.ckpt -l outputs/custom-ldm-samples -n 8 --batch_size 4 -c
+      200 -e 0.0
+```
+
 ## News
 
 ### July 2022
@@ -358,5 +367,3 @@ Thanks for open-sourcing!
 
 
 ```
-
-
