@@ -1,5 +1,5 @@
 model:
-  base_learning_rate: 5.0e-5   # set to target_lr by starting main.py with '--scale_lr False'
+  base_learning_rate: 1.0e-4   # set to target_lr by starting main.py with '--scale_lr False'
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
     linear_start: 0.0015
@@ -17,14 +17,14 @@ model:
     scale_by_std: True
     monitor: 'val/loss_simple_ema'
 
-    scheduler_config: # 10000 warmup steps
-      target: ldm.lr_scheduler.LambdaLinearScheduler
+    scheduler_config: # 10000 warmup steps, cosine decay to 10% of peak
+      target: ldm.lr_scheduler.LambdaWarmUpCosineScheduler2
       params:
         warm_up_steps: [10000]
         cycle_lengths: [10000000000000]
         f_start: [1.e-6]
         f_max: [1.]
-        f_min: [ 1.]
+        f_min: [0.1]
 
     unet_config:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
@@ -66,8 +66,8 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 8
-    num_workers: 5
+    batch_size: 16
+    num_workers: 8
     wrap: False
     train:
       target: ldm.data.lsun.LSUNChurchesTrain
@@ -94,4 +94,4 @@ lightning:
 
   trainer:
     benchmark: True
-    accumulate_grad_batches: 4
+    accumulate_grad_batches: 2

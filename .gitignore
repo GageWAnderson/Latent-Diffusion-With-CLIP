@@ -1,3 +1,5 @@
+.venv
+
 # Large model files
 *.ckpt
 *.zip
