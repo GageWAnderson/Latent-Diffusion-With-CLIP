@@ -1,0 +1,14 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+huggingface_hub
+pytorch-lightning>=1.9.5
+omegaconf==2.3.0
+einops==0.6.1
+transformers>=4.30.0
+numpy
+Pillow
+tqdm
+kornia==0.6.4
+taming-transformers-rom1504
+git+https://github.com/openai/CLIP.git@main#egg=clip
