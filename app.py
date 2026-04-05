@@ -1,21 +1,23 @@
 import os
-import spaces
-import gradio as gr
-import torch
-import numpy as np
-from PIL import Image
-from einops import rearrange
-from omegaconf import OmegaConf
-from huggingface_hub import hf_hub_download
 
-from ldm.util import instantiate_from_config
+import gradio as gr
+import numpy as np
+import spaces
+import torch
+from einops import rearrange
+from huggingface_hub import hf_hub_download
+from omegaconf import OmegaConf
+from PIL import Image
+
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
+from ldm.util import instantiate_from_config
 
 # --- Configuration ---
 CONFIG_PATH = "configs/latent-diffusion/lsun_churches-ldm-kl-8.yaml"
 MODEL_REPO_ID = "Harbinger67/Churches-Latent-Diffusion"
-CKPT_FILENAME = "model.ckpt"
+# CKPT_FILENAME = "model.ckpt"
+CKPT_FILENAME = "last.ckpt"
 
 model = None
 
