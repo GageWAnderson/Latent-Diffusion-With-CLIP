@@ -135,7 +135,7 @@ def plot_interactive(coords, thumbnails, outdir, thumb_size):
             mode="markers",
             marker=dict(size=5, opacity=0.6),
             customdata=data_uris,
-            hovertemplate="<img src='%{customdata}' width='128' height='128'><extra></extra>",
+            hoverinfo="none",
         )
     )
     fig.update_layout(
@@ -147,8 +147,49 @@ def plot_interactive(coords, thumbnails, outdir, thumb_size):
         yaxis=dict(scaleanchor="x"),
     )
 
+    # Custom JS: listen for hover events and show a floating <img> overlay
+    hover_js = """
+    <style>
+      #thumb-overlay {
+        display: none;
+        position: fixed;
+        pointer-events: none;
+        z-index: 9999;
+        border: 2px solid #333;
+        border-radius: 4px;
+        background: #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      }
+    </style>
+    <img id="thumb-overlay" width="192" height="192" />
+    <script>
+      (function() {
+        var overlay = document.getElementById('thumb-overlay');
+        var plotDiv = document.querySelector('.plotly-graph-div');
+        plotDiv.on('plotly_hover', function(data) {
+          var pt = data.points[0];
+          overlay.src = pt.customdata;
+          overlay.style.display = 'block';
+        });
+        plotDiv.on('plotly_unhover', function() {
+          overlay.style.display = 'none';
+        });
+        document.addEventListener('mousemove', function(e) {
+          if (overlay.style.display === 'block') {
+            overlay.style.left = (e.clientX + 16) + 'px';
+            overlay.style.top = (e.clientY + 16) + 'px';
+          }
+        });
+      })();
+    </script>
+    """
+
     outpath = os.path.join(outdir, "latent_tsne_interactive.html")
-    fig.write_html(outpath)
+    html_str = fig.to_html(full_html=True, include_plotlyjs=True)
+    # Inject the hover overlay just before </body>
+    html_str = html_str.replace("</body>", hover_js + "\n</body>")
+    with open(outpath, "w") as f:
+        f.write(html_str)
     print(f"Saved interactive plot to {outpath}")
 
 
