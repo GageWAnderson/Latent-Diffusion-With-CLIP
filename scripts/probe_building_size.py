@@ -30,10 +30,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ldm.util import instantiate_from_config
 
+# python scripts/probe_building_size.py \
+#       --big_indices "676,641,656,444,3" \
+#       --small_indices "534,530,627,634,779" \
+#       --reuse_coords
+
 
 # ---------------------------------------------------------------------------
 # Helpers (adapted from analyze_latent_space.py / diagnose_latent_space.py)
 # ---------------------------------------------------------------------------
+
 
 def load_autoencoder(config, ckpt_path, device):
     ae_cfg = config.model.params.first_stage_config
@@ -43,7 +49,9 @@ def load_autoencoder(config, ckpt_path, device):
         sd = sd["state_dict"]
     missing, unexpected = model.load_state_dict(sd, strict=False)
     if missing:
-        print(f"Missing keys ({len(missing)}): {missing[:5]}{'...' if len(missing) > 5 else ''}")
+        print(
+            f"Missing keys ({len(missing)}): {missing[:5]}{'...' if len(missing) > 5 else ''}"
+        )
     model.to(device)
     model.eval()
     return model
@@ -99,7 +107,9 @@ def save_image_grid(pil_images, labels, ncols, outpath):
     img_w, img_h = pil_images[0].size
     label_pad = 18 if labels is not None else 0
 
-    canvas = Image.new("RGB", (ncols * img_w, nrows * (img_h + label_pad)), color=(240, 240, 240))
+    canvas = Image.new(
+        "RGB", (ncols * img_w, nrows * (img_h + label_pad)), color=(240, 240, 240)
+    )
     draw = ImageDraw.Draw(canvas) if labels is not None else None
 
     for idx, img in enumerate(pil_images):
@@ -124,9 +134,12 @@ def parse_indices(s):
 # Phase 1: Labeling grid
 # ---------------------------------------------------------------------------
 
+
 def make_labeling_grid(thumbnails, outdir, thumb_size=128, ncols=20):
     n = len(thumbnails)
-    pil_images = [np_to_pil(thumbnails[i], thumb_size) for i in tqdm(range(n), desc="Grid")]
+    pil_images = [
+        np_to_pil(thumbnails[i], thumb_size) for i in tqdm(range(n), desc="Grid")
+    ]
     labels = [str(i) for i in range(n)]
     outpath = os.path.join(outdir, "labeling_grid.png")
     save_image_grid(pil_images, labels, ncols, outpath)
@@ -136,6 +149,7 @@ def make_labeling_grid(thumbnails, outdir, thumb_size=128, ncols=20):
 # Phase 2: Fit linear probe
 # ---------------------------------------------------------------------------
 
+
 def fit_probe(embeddings, big_indices, small_indices):
     labeled_indices = big_indices + small_indices
     labels = np.array([1] * len(big_indices) + [0] * len(small_indices))
@@ -143,19 +157,26 @@ def fit_probe(embeddings, big_indices, small_indices):
     X = embeddings[labeled_indices]
     y = labels
 
-    print(f"Fitting logistic regression on {len(big_indices)} big + {len(small_indices)} small = {len(y)} labels")
+    print(
+        f"Fitting logistic regression on {len(big_indices)} big + {len(small_indices)} small = {len(y)} labels"
+    )
 
     # Use fewer CV folds if we have very few samples
     n_folds = min(5, len(y))
     if n_folds < 2:
         print("Warning: too few labels for cross-validation, using all data without CV")
         from sklearn.linear_model import LogisticRegression
+
         clf = LogisticRegression(penalty="l2", C=1.0, max_iter=1000, random_state=42)
         clf.fit(X, y)
         print(f"Training accuracy: {clf.score(X, y):.1%}")
     else:
         clf = LogisticRegressionCV(
-            penalty="l2", Cs=10, cv=n_folds, max_iter=1000, random_state=42,
+            penalty="l2",
+            Cs=10,
+            cv=n_folds,
+            max_iter=1000,
+            random_state=42,
         )
         clf.fit(X, y)
         print(f"Best C: {clf.C_[0]:.4f}")
@@ -168,10 +189,13 @@ def fit_probe(embeddings, big_indices, small_indices):
 # Phase 3: Score & visualize
 # ---------------------------------------------------------------------------
 
+
 def score_all(clf, embeddings):
     probs = clf.predict_proba(embeddings)[:, 1]  # P(big)
-    print(f"P(big) — min: {probs.min():.3f}, max: {probs.max():.3f}, "
-          f"mean: {probs.mean():.3f}, std: {probs.std():.3f}")
+    print(
+        f"P(big) — min: {probs.min():.3f}, max: {probs.max():.3f}, "
+        f"mean: {probs.mean():.3f}, std: {probs.std():.3f}"
+    )
     return probs
 
 
@@ -182,13 +206,20 @@ def save_top_bottom_grids(thumbnails, probs, top_k, outdir, thumb_size=128):
     top_big = order[-top_k:][::-1]
     pil_big = [np_to_pil(thumbnails[i], thumb_size) for i in top_big]
     labels_big = [f"#{i} P={probs[i]:.2f}" for i in top_big]
-    save_image_grid(pil_big, labels_big, ncols=8, outpath=os.path.join(outdir, "probe_top_big.png"))
+    save_image_grid(
+        pil_big, labels_big, ncols=8, outpath=os.path.join(outdir, "probe_top_big.png")
+    )
 
     # Top-K smallest
     top_small = order[:top_k]
     pil_small = [np_to_pil(thumbnails[i], thumb_size) for i in top_small]
     labels_small = [f"#{i} P={probs[i]:.2f}" for i in top_small]
-    save_image_grid(pil_small, labels_small, ncols=8, outpath=os.path.join(outdir, "probe_top_small.png"))
+    save_image_grid(
+        pil_small,
+        labels_small,
+        ncols=8,
+        outpath=os.path.join(outdir, "probe_top_small.png"),
+    )
 
 
 def plot_tsne_by_score(embeddings, probs, outdir, reuse_coords):
@@ -210,13 +241,24 @@ def plot_tsne_by_score(embeddings, probs, outdir, reuse_coords):
         reduced = pca.fit_transform(embeddings)
         print(f"PCA explains {pca.explained_variance_ratio_.sum():.1%} of variance")
         print("Running t-SNE...")
-        coords = TSNE(n_components=2, perplexity=30.0, random_state=42, n_jobs=-1).fit_transform(reduced)
+        coords = TSNE(
+            n_components=2, perplexity=30.0, random_state=42, n_jobs=-1
+        ).fit_transform(reduced)
         np.save(coords_path, coords)
         print(f"Saved coords to {coords_path}")
 
     fig, ax = plt.subplots(figsize=(10, 10))
-    sc = ax.scatter(coords[:, 0], coords[:, 1], c=probs, s=4, alpha=0.5,
-                    cmap="RdYlBu_r", linewidths=0, vmin=0, vmax=1)
+    sc = ax.scatter(
+        coords[:, 0],
+        coords[:, 1],
+        c=probs,
+        s=4,
+        alpha=0.5,
+        cmap="RdYlBu_r",
+        linewidths=0,
+        vmin=0,
+        vmax=1,
+    )
     plt.colorbar(sc, ax=ax, label="P(big building)")
     ax.set_title(f"t-SNE colored by P(big building) ({N} samples)")
     ax.set_xlabel("t-SNE dim 1")
@@ -248,24 +290,44 @@ def plot_histogram(probs, outdir):
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Linear probe for building size in latent space")
-    parser.add_argument("--config", default="configs/latent-diffusion/lsun_churches-ldm-kl-8.yaml")
+    parser = argparse.ArgumentParser(
+        description="Linear probe for building size in latent space"
+    )
+    parser.add_argument(
+        "--config", default="configs/latent-diffusion/lsun_churches-ldm-kl-8.yaml"
+    )
     parser.add_argument("--ckpt", default="models/first_stage_models/kl-f8/model.ckpt")
     parser.add_argument("--n_samples", type=int, default=2000)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--outdir", default="outputs/")
     parser.add_argument("--num_workers", type=int, default=4)
-    parser.add_argument("--label_only", action="store_true",
-                        help="Only generate the labeling grid, then exit")
-    parser.add_argument("--big_indices", type=str, default="",
-                        help="Comma-separated indices of 'big building' images")
-    parser.add_argument("--small_indices", type=str, default="",
-                        help="Comma-separated indices of 'small building' images")
-    parser.add_argument("--top_k", type=int, default=32,
-                        help="Number of top/bottom images to display")
-    parser.add_argument("--reuse_coords", action="store_true",
-                        help="Reuse cached t-SNE coords from outputs/latent_tsne_coords.npy")
+    parser.add_argument(
+        "--label_only",
+        action="store_true",
+        help="Only generate the labeling grid, then exit",
+    )
+    parser.add_argument(
+        "--big_indices",
+        type=str,
+        default="",
+        help="Comma-separated indices of 'big building' images",
+    )
+    parser.add_argument(
+        "--small_indices",
+        type=str,
+        default="",
+        help="Comma-separated indices of 'small building' images",
+    )
+    parser.add_argument(
+        "--top_k", type=int, default=32, help="Number of top/bottom images to display"
+    )
+    parser.add_argument(
+        "--reuse_coords",
+        action="store_true",
+        help="Reuse cached t-SNE coords from outputs/latent_tsne_coords.npy",
+    )
     opt = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -280,7 +342,9 @@ def main():
     print("Loading dataset...")
     dataset = instantiate_from_config(config.data.params.validation)
     if opt.n_samples < len(dataset):
-        indices = np.random.default_rng(0).choice(len(dataset), size=opt.n_samples, replace=False)
+        indices = np.random.default_rng(0).choice(
+            len(dataset), size=opt.n_samples, replace=False
+        )
         dataset = Subset(dataset, indices.tolist())
     dataloader = DataLoader(
         dataset,
@@ -290,14 +354,18 @@ def main():
         pin_memory=(device.type == "cuda"),
     )
 
-    embeddings, thumbnails = collect_embeddings(model, dataloader, opt.n_samples, device)
+    embeddings, thumbnails = collect_embeddings(
+        model, dataloader, opt.n_samples, device
+    )
 
     # Phase 1: labeling grid
     make_labeling_grid(thumbnails, opt.outdir)
 
     if opt.label_only:
-        print("\n--label_only set. Examine outputs/labeling_grid.png and re-run with "
-              "--big_indices and --small_indices.")
+        print(
+            "\n--label_only set. Examine outputs/labeling_grid.png and re-run with "
+            "--big_indices and --small_indices."
+        )
         return
 
     # Parse labels
